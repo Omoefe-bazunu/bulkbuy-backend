@@ -21,12 +21,10 @@ exports.submitSubscription = async (req, res) => {
       paymentStatus: "pending",
     });
 
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Subscription request submitted for review",
-      });
+    res.status(200).json({
+      success: true,
+      message: "Subscription request submitted for review",
+    });
   } catch (error) {
     res.status(500).json({ message: "Subscription submission failed" });
   }

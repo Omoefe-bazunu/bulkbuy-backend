@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
-const JWT_SECRET = process.env.JWT_SECRET || "bulkbuy_ultra_secret_2026";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "BULKBUY_SECRET_KEY_004455667788901";
 
 module.exports = (req, res, next) => {
   // 1. Get token from header (Format: Bearer <token>)

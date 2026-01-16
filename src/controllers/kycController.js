@@ -1,50 +1,48 @@
 const { db, admin } = require("../config/firebase");
 
+// --- SUBMIT KYC ---
 exports.submitKYC = async (req, res) => {
   try {
     const userId = req.user.id;
     const { nin, bvn, passportUrl, cacUrl, statusReportUrl } = req.body;
 
-    // 1. Basic Validation: Ensure all required fields exist
-    if (!nin || !bvn || !passportUrl || !cacUrl || !statusReportUrl) {
-      return res.status(400).json({
-        message: "Missing required KYC documents or information.",
-      });
+    // 1. Validation
+    if (!nin || !bvn || !passportUrl || !cacUrl) {
+      return res
+        .status(400)
+        .json({ message: "NIN, BVN, Passport, and CAC are required." });
     }
 
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
 
     if (!userDoc.exists) {
-      return res.status(404).json({ message: "User not found." });
+      return res.status(404).json({ message: "User account not found." });
     }
 
     const userData = userDoc.data();
 
-    // 2. Prevent resubmission if already pending or verified
+    // 2. State Check
     if (userData.status === "pending") {
-      return res.status(400).json({
-        message: "Your verification is already being reviewed.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Verification is already pending." });
+    }
+    if (userData.status === "verified") {
+      return res.status(400).json({ message: "Account is already verified." });
     }
 
-    if (userData.status === "verified" || userData.status === "approved") {
-      return res.status(400).json({
-        message: "Your account is already verified.",
-      });
-    }
-
-    // 3. Update the document
+    // 3. Update User Document
     await userRef.update({
+      status: "pending",
       kycData: {
         nin,
         bvn,
         passportUrl,
         cacUrl,
-        statusReportUrl,
+        statusReportUrl: statusReportUrl || null,
         submittedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
-      status: "pending", // Set status to trigger the "Pending" UI on the mobile app
       kycUpdateHistory: admin.firestore.FieldValue.arrayUnion({
         action: "submitted",
         timestamp: new Date().toISOString(),
@@ -53,13 +51,31 @@ exports.submitKYC = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message:
-        "KYC documents submitted successfully. Verification is now pending.",
+      message: "KYC documents submitted. Verification is now pending.",
     });
   } catch (error) {
-    console.error("KYC Submission Error:", error);
-    res
-      .status(500)
-      .json({ message: "Failed to submit KYC documents. Please try again." });
+    console.error("KYC Submit Error:", error);
+    res.status(500).json({ message: "Server error during KYC submission." });
+  }
+};
+
+// --- GET KYC STATUS ---
+exports.getKYCStatus = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const userData = userDoc.data();
+
+    // Return only the status to the frontend
+    res.status(200).json({
+      status: userData.status || "unverified",
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching status." });
   }
 };

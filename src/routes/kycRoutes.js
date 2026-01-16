@@ -5,7 +5,10 @@ const authMiddleware = require("../middlewares/authMiddleware");
 
 // @route   POST /api/kyc/submit-kyc
 // @desc    Submit NIN, BVN, and CAC documents for verification
-// @access  Private (Requires Auth Token)
 router.post("/submit-kyc", authMiddleware, kycController.submitKYC);
+
+// @route   GET /api/kyc/status
+// @desc    Check current user's KYC verification status
+router.get("/status", authMiddleware, kycController.getKYCStatus);
 
 module.exports = router;
