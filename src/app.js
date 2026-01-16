@@ -3,6 +3,9 @@ const express = require("express");
 const cors = require("cors");
 const { db } = require("./config/firebase");
 const authRoutes = require("./routes/authRoutes");
+const kycRoutes = require("/routes/kycRoutes");
+const productRoutes = require("./routes/productRoutes");
+const subscriptionRoutes = require("./routes/subscriptionRoutes");
 
 const app = express();
 
@@ -20,6 +23,9 @@ app.use(express.json());
 
 // Auth Routes (Signup & Login)
 app.use("/api/auth", authRoutes);
+app.use("/api/kyc", kycRoutes);
+app.use("/api/products", productRoutes);
+app.use("/api/subscriptions", subscriptionRoutes);
 
 // Test Route to check API health
 app.get("/", (req, res) => {
