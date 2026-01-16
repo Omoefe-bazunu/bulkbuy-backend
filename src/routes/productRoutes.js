@@ -11,4 +11,25 @@ router.post("/add", authMiddleware, productController.addProduct);
 // @desc    Get all products belonging to the logged-in user
 router.get("/user", authMiddleware, productController.getUserProducts);
 
+// @route   DELETE /api/products/delete/:productId
+// @desc    Delete product and its associated media
+router.delete(
+  "/delete/:productId",
+  authMiddleware,
+  productController.deleteProduct
+);
+
+// @route   PUT /api/products/update/:productId
+router.put(
+  "/update/:productId",
+  authMiddleware,
+  productController.updateProduct
+);
+
+router.get(
+  "/user-dashboard",
+  authMiddleware,
+  productController.getUserDashboard
+);
+
 module.exports = router;
