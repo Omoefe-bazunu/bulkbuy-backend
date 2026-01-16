@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const { db } = require("./config/firebase");
 const authRoutes = require("./routes/authRoutes");
-const kycRoutes = require("/routes/kycRoutes");
+const kycRoutes = require("./routes/kycRoutes");
 const productRoutes = require("./routes/productRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 
