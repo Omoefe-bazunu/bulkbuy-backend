@@ -1,13 +1,11 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const { db } = require("./config/firebase"); // Ensures Firebase Admin is initialized
-const authRoutes = require("./routes/authRoutes"); // Import the new Auth routes
+const { db } = require("./config/firebase");
+const authRoutes = require("./routes/authRoutes");
 
 const app = express();
 
-// Standard CORS for Mobile App & Dev
-// Since it's a mobile app, "*" is fine for development.
 app.use(
   cors({
     origin: "*",
