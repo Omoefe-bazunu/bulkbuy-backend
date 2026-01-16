@@ -1,14 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const authController = require("../controllers/authController");
-const authMiddleware = require("../middlewares/authMiddleware"); // Import the Gatekeeper
+const authMiddleware = require("../middlewares/authMiddleware");
 
 // Public Routes
 router.post("/signup", authController.signup);
 router.post("/login", authController.login);
 
-// Protected Route: Get User Profile
-// Notice how 'authMiddleware' is placed BEFORE the controller logic
+// Forgot & Reset Password Routes (Add these!)
+// If these are missing or misspelled in authController.js, Render will crash
+router.post("/forgot-password", authController.forgotPassword);
+router.put("/reset-password/:token", authController.resetPassword);
+
+// Protected Route
 router.get("/profile", authMiddleware, authController.getProfile);
 
 module.exports = router;
