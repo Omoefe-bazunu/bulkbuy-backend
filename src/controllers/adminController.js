@@ -75,11 +75,11 @@ exports.updateSubscriptionStatus = async (req, res) => {
       approvedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Update User record
     const userRef = db.collection("users").doc(userId);
     batch.update(userRef, {
       paymentStatus: status,
-      isVerifiedTrader: status === "verified",
+      // If verified, you can choose to change the role to 'seller' or 'pro'
+      role: status === "verified" ? "seller" : "buyer",
     });
 
     await batch.commit();

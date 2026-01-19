@@ -223,3 +223,24 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error during password reset" });
   }
 };
+
+exports.getProfile = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const userDoc = await db.collection("users").doc(userId).get();
+
+    if (!userDoc.exists)
+      return res.status(404).json({ message: "User not found" });
+
+    const userData = userDoc.data();
+    delete userData.password; // Remove sensitive data [cite: 95]
+
+    // Ensure the specific fields you need are included
+    res.status(200).json({
+      id: userDoc.id,
+      ...userData,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Server error fetching profile" });
+  }
+};
