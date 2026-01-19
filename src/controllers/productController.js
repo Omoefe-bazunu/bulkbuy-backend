@@ -179,3 +179,37 @@ exports.completeOrder = async (req, res) => {
     res.status(500).json({ message: "Update failed" });
   }
 };
+
+// Get Marketplace Products (Paginated & Sorted)
+exports.getMarketplace = async (req, res) => {
+  try {
+    const { lastVisible, limit = 10 } = req.query; // Pagination params
+    let query = db
+      .collection("products")
+      .where("status", "==", "active")
+      .orderBy("createdAt", "desc")
+      .limit(Number(limit));
+
+    // If paginating, start after the last document from previous fetch
+    if (lastVisible) {
+      const lastDoc = await db.collection("products").doc(lastVisible).get();
+      if (lastDoc.exists) query = query.startAfter(lastDoc);
+    }
+
+    const snapshot = await query.get();
+    const products = snapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
+
+    // Identify the new last document for the next page request
+    const lastId =
+      snapshot.docs.length > 0
+        ? snapshot.docs[snapshot.docs.length - 1].id
+        : null;
+
+    res.status(200).json({ products, lastId });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching marketplace" });
+  }
+};
