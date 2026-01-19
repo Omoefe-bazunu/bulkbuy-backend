@@ -40,10 +40,19 @@ exports.getSubscriptionStatus = async (req, res) => {
       .limit(1)
       .get();
 
-    if (snapshot.empty) return res.status(200).json({ status: "none" });
+    if (snapshot.empty) {
+      return res.status(200).json({ status: "none" });
+    }
 
-    res.status(200).json(snapshot.docs[0].data());
+    const data = snapshot.docs[0].data();
+    // Explicitly return the status so the frontend finds data.status easily
+    res.status(200).json({
+      status: data.status || "none",
+      planType: data.planType,
+      amount: data.amount,
+    });
   } catch (error) {
+    console.error("Status Check Error:", error);
     res.status(500).json({ message: "Error checking status" });
   }
 };
