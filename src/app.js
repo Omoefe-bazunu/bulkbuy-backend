@@ -6,6 +6,7 @@ const authRoutes = require("./routes/authRoutes");
 const kycRoutes = require("./routes/kycRoutes");
 const productRoutes = require("./routes/productRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 
 const app = express();
 
@@ -13,7 +14,7 @@ app.use(
   cors({
     origin: "*",
     credentials: true,
-  })
+  }),
 );
 
 // Middleware to parse JSON bodies
@@ -26,6 +27,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/kyc", kycRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
+app.use("/api/admin", require("./routes/adminRoutes"));
 
 // Test Route to check API health
 app.get("/", (req, res) => {
