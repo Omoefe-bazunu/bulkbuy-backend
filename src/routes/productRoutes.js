@@ -38,4 +38,6 @@ router.put(
   productController.completeOrder,
 );
 
+router.get("/marketplace", productController.getMarketplace);
+
 module.exports = router;
