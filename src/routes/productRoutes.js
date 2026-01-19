@@ -39,5 +39,25 @@ router.put(
 );
 
 router.get("/marketplace", productController.getMarketplace);
+router.get("/details/:id", productController.getProductDetails);
+
+// @route   POST /api/products/order/initiate
+// @desc    Initiate a wholesale deal and create a pending order
+router.post("/order/initiate", authMiddleware, productController.initiateOrder);
+
+// @route   GET /api/products/reviews/:productId
+// @desc    Get all reviews and calculated stats for a specific product
+router.get("/reviews/:productId", productController.getProductReviews);
+
+// @route   POST /api/products/review/add
+// @desc    Add or update a review (Requires authentication)
+router.post("/review/add", authMiddleware, productController.addReview);
+
+// @route   DELETE /api/products/review/delete/:productId
+router.delete(
+  "/review/delete/:productId",
+  authMiddleware,
+  productController.deleteReview,
+);
 
 module.exports = router;

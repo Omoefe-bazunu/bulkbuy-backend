@@ -213,3 +213,151 @@ exports.getMarketplace = async (req, res) => {
     res.status(500).json({ message: "Error fetching marketplace" });
   }
 };
+
+exports.getProductDetails = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await db.collection("products").doc(id).get();
+
+    if (!doc.exists)
+      return res.status(404).json({ message: "Product not found" });
+
+    const product = { id: doc.id, ...doc.data() };
+
+    // Fetch associated reviews to calculate real stats
+    const reviewsSnap = await db
+      .collection("reviews")
+      .where("productId", "==", id)
+      .get();
+
+    const reviews = reviewsSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const totalRatings = reviews.reduce((acc, curr) => acc + curr.rating, 0);
+    const avgRating =
+      reviews.length > 0 ? (totalRatings / reviews.length).toFixed(1) : "0.0";
+
+    res.status(200).json({
+      ...product,
+      avgRating,
+      reviewCount: reviews.length,
+      reviews,
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching details" });
+  }
+};
+
+exports.initiateOrder = async (req, res) => {
+  try {
+    const { productId, sellerId, productName, quantity, totalAmount } =
+      req.body;
+    const buyerId = req.user.id;
+
+    // Don't let users buy their own products
+    if (buyerId === sellerId) {
+      return res
+        .status(400)
+        .json({ message: "You cannot purchase your own product" });
+    }
+
+    const orderData = {
+      productId,
+      sellerId,
+      buyerId,
+      buyerName: req.user.name,
+      buyerPhone: req.user.phone || "",
+      productName,
+      quantity,
+      totalAmount,
+      status: "pending",
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    const docRef = await db.collection("orders").add(orderData);
+
+    res.status(201).json({ success: true, orderId: docRef.id });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to initiate order" });
+  }
+};
+
+// Fetch reviews and average rating for a specific product
+exports.getProductReviews = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const snapshot = await db
+      .collection("reviews")
+      .where("productId", "==", productId)
+      .orderBy("createdAt", "desc")
+      .get();
+
+    const reviews = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+
+    // Calculate Stats
+    const total = reviews.reduce((acc, curr) => acc + curr.rating, 0);
+    const avg =
+      reviews.length > 0 ? (total / reviews.length).toFixed(1) : "0.0";
+
+    res
+      .status(200)
+      .json({ reviews, avgRating: avg, reviewCount: reviews.length });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch reviews" });
+  }
+};
+
+// Add or Update a Review
+exports.addReview = async (req, res) => {
+  try {
+    const { productId, rating, comment } = req.body;
+    const userId = req.user.id;
+    const userName = req.user.name;
+
+    const reviewData = {
+      productId,
+      userId,
+      userName,
+      rating: Number(rating),
+      comment,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    };
+
+    // Use a unique ID to allow only one review per user per product (Update if exists)
+    const reviewId = `${userId}_${productId}`;
+    await db
+      .collection("reviews")
+      .doc(reviewId)
+      .set(reviewData, { merge: true });
+
+    res.status(200).json({ success: true, message: "Review saved" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to save review" });
+  }
+};
+
+// Delete a specific review
+exports.deleteReview = async (req, res) => {
+  try {
+    const { productId } = req.params;
+    const userId = req.user.id;
+    const reviewId = `${userId}_${productId}`;
+
+    const reviewRef = db.collection("reviews").doc(reviewId);
+    const doc = await reviewRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ message: "Review not found" });
+    }
+
+    // Security: Only the owner can delete
+    if (doc.data().userId !== userId) {
+      return res
+        .status(403)
+        .json({ message: "Unauthorized to delete this review" });
+    }
+
+    await reviewRef.delete();
+    res.status(200).json({ success: true, message: "Review deleted" });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete review" });
+  }
+};
