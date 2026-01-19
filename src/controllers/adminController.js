@@ -42,13 +42,30 @@ exports.getPendingSubscriptions = async (req, res) => {
       .collection("subscriptions")
       .where("status", "==", "pending")
       .get();
-    const requests = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    res.status(200).json(requests);
+
+    const requests = snapshot.docs.map((doc) => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        amount: data.amount ? Number(data.amount) : 0, // Ensure number type [cite: 209]
+      };
+    });
+
+    // Calculate total revenue from all verified subscriptions
+    const verifiedSnapshot = await db
+      .collection("subscriptions")
+      .where("status", "==", "verified")
+      .get();
+
+    let totalRevenue = 0;
+    verifiedSnapshot.forEach((doc) => {
+      totalRevenue += Number(doc.data().amount || 0);
+    });
+
+    res.status(200).json({ requests, totalRevenue });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching Subscriptions" });
+    res.status(500).json({ message: "Error fetching subscriptions" });
   }
 };
 
