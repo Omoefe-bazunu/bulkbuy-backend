@@ -27,7 +27,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/kyc", kycRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
-app.use("/api/admin", require("./routes/adminRoutes"));
+app.use("/api/admin", adminRoutes);
 
 // Test Route to check API health
 app.get("/", (req, res) => {
