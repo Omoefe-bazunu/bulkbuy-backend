@@ -40,19 +40,26 @@ exports.getSubscriptionStatus = async (req, res) => {
       .limit(1)
       .get();
 
-    if (snapshot.empty) {
-      return res.status(200).json({ status: "none" });
-    }
+    if (snapshot.empty) return res.status(200).json({ status: "none" });
 
     const data = snapshot.docs[0].data();
-    // Explicitly return the status so the frontend finds data.status easily
+    const now = new Date();
+
+    // Auto-expiry logic
+    if (data.status === "verified" && data.expiryDate) {
+      const expiry = data.expiryDate.toDate
+        ? data.expiryDate.toDate()
+        : new Date(data.expiryDate);
+      if (now > expiry) {
+        return res.status(200).json({ status: "none" }); // Reset to form if expired
+      }
+    }
+
     res.status(200).json({
-      status: data.status || "none",
-      planType: data.planType,
-      amount: data.amount,
+      ...data,
+      id: snapshot.docs[0].id,
     });
   } catch (error) {
-    console.error("Status Check Error:", error);
     res.status(500).json({ message: "Error checking status" });
   }
 };
