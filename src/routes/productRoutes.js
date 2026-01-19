@@ -16,20 +16,26 @@ router.get("/user", authMiddleware, productController.getUserProducts);
 router.delete(
   "/delete/:productId",
   authMiddleware,
-  productController.deleteProduct
+  productController.deleteProduct,
 );
 
 // @route   PUT /api/products/update/:productId
 router.put(
   "/update/:productId",
   authMiddleware,
-  productController.updateProduct
+  productController.updateProduct,
 );
 
 router.get(
   "/user-dashboard",
   authMiddleware,
-  productController.getUserDashboard
+  productController.getUserDashboard,
+);
+
+router.put(
+  "/order/complete/:orderId",
+  authMiddleware,
+  productController.completeOrder,
 );
 
 module.exports = router;

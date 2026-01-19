@@ -153,3 +153,29 @@ exports.updateProduct = async (req, res) => {
     res.status(500).json({ message: "Update failed", error: error.message });
   }
 };
+
+exports.completeOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const userId = req.user.id;
+
+    const orderRef = db.collection("orders").doc(orderId);
+    const orderDoc = await orderRef.get();
+
+    if (!orderDoc.exists)
+      return res.status(404).json({ message: "Order not found" });
+    if (orderDoc.data().sellerId !== userId)
+      return res.status(403).json({ message: "Unauthorized" });
+
+    await orderRef.update({
+      status: "completed",
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Order marked as completed" });
+  } catch (error) {
+    res.status(500).json({ message: "Update failed" });
+  }
+};
