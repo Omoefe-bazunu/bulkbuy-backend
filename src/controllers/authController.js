@@ -4,7 +4,8 @@ const jwt = require("jsonwebtoken");
 const crypto = require("crypto");
 const { Resend } = require("resend");
 
-const JWT_SECRET = process.env.JWT_SECRET || "bulkbuy_ultra_secret_2026";
+const JWT_SECRET =
+  process.env.JWT_SECRET || "BULKBUY_SECRET_KEY_004455667788901";
 const resend = new Resend(process.env.RESEND_API_KEY);
 
 // --- ORIGINAL AUTH LOGIC ---
@@ -40,7 +41,7 @@ exports.signup = async (req, res) => {
     const token = jwt.sign(
       { id: docRef.id, email: newUser.email },
       JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     res.status(201).json({
@@ -88,7 +89,7 @@ exports.login = async (req, res) => {
     const token = jwt.sign(
       { id: userDoc.id, email: userDoc.email },
       JWT_SECRET,
-      { expiresIn: "7d" }
+      { expiresIn: "7d" },
     );
 
     res.status(200).json({
