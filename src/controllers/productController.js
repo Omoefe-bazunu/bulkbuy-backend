@@ -310,36 +310,40 @@ exports.addReview = async (req, res) => {
   try {
     const { productId, rating, comment } = req.body;
 
-    // Safety check for required fields
-    if (!productId || !rating || !comment) {
+    // 1. Basic Validation
+    if (!productId || rating === undefined || !comment) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const userId = req.user.id;
-    const userName = req.user.name;
+    // 2. Extract identity from request (mapped from your DB structure)
+    // Fallback: Name -> Email -> Anonymous
+    const userId = req.user?.id;
+    const displayName =
+      req.user?.fullName ||
+      req.user?.name ||
+      req.user?.email?.split("@")[0] ||
+      "Anonymous User";
 
+    // 3. Construct clean data for Firestore
     const reviewData = {
-      productId,
-      userId,
-      userName,
+      productId: String(productId),
+      userId: String(userId),
+      fullName: String(displayName), // Updated to match your schema
       rating: Number(rating),
-      comment: comment.trim(),
+      comment: String(comment).trim(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Use a unique ID: userId_productId
+    // Use unique ID to prevent duplicate reviews by same user
     const reviewId = `${userId}_${productId}`;
 
-    // Write to Firestore
     await db
       .collection("reviews")
       .doc(reviewId)
       .set(reviewData, { merge: true });
 
-    console.log(`Review saved successfully for product: ${productId}`);
     res.status(200).json({ success: true, message: "Review saved" });
   } catch (error) {
-    // This will print the EXACT error in your server terminal/Render logs
     console.error("FIRESTORE_REVIEW_ERROR:", error);
     res
       .status(500)
