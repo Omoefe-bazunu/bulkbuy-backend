@@ -263,34 +263,64 @@ exports.getProductDetails = async (req, res) => {
 
 exports.initiateOrder = async (req, res) => {
   try {
-    const { productId, sellerId, productName, quantity, totalAmount } =
-      req.body;
+    const {
+      productId,
+      sellerId,
+      productName,
+      quantity,
+      totalAmount,
+      sellerName,
+    } = req.body;
     const buyerId = req.user.id;
 
-    // Don't let users buy their own products
+    // Prevent users from buying their own products
     if (buyerId === sellerId) {
       return res
         .status(400)
         .json({ message: "You cannot purchase your own product" });
     }
 
+    // Check if a negotiation already exists for this buyer and product to avoid duplicates
+    const existingOrder = await db
+      .collection("orders")
+      .where("buyerId", "==", buyerId)
+      .where("productId", "==", productId)
+      .where("status", "==", "pending")
+      .limit(1)
+      .get();
+
+    if (!existingOrder.empty) {
+      return res.status(200).json({
+        success: true,
+        orderId: existingOrder.docs[0].id,
+        message: "Continuing existing negotiation",
+      });
+    }
+
     const orderData = {
       productId,
       sellerId,
       buyerId,
-      buyerName: req.user.name,
-      buyerPhone: req.user.phone || "",
+      buyerName: req.user.fullName || req.user.name || "Buyer",
+      sellerName: sellerName || "Seller", // Passed from frontend
       productName,
-      quantity,
-      totalAmount,
+      quantity: Number(quantity),
+      totalAmount: Number(totalAmount),
       status: "pending",
+      // NEW FIELDS FOR CHAT LIST
+      lastMessage: "Negotiation started",
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
     const docRef = await db.collection("orders").add(orderData);
 
-    res.status(201).json({ success: true, orderId: docRef.id });
+    res.status(201).json({
+      success: true,
+      orderId: docRef.id,
+    });
   } catch (error) {
+    console.error("Initiate Order Error:", error);
     res.status(500).json({ message: "Failed to initiate order" });
   }
 };

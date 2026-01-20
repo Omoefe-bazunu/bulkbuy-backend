@@ -7,6 +7,7 @@ const kycRoutes = require("./routes/kycRoutes");
 const productRoutes = require("./routes/productRoutes");
 const subscriptionRoutes = require("./routes/subscriptionRoutes");
 const adminRoutes = require("./routes/adminRoutes");
+const orderRoutes = require("./routes/orderRoutes");
 
 const app = express();
 
@@ -28,6 +29,7 @@ app.use("/api/kyc", kycRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/subscriptions", subscriptionRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/orders", orderRoutes);
 
 // Test Route to check API health
 app.get("/", (req, res) => {
