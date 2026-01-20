@@ -194,9 +194,9 @@ exports.getMarketplace = async (req, res) => {
       // Prefix search: matches names starting with the search string
       // Note: This requires a composite index (status, name, createdAt)
       query = query
-        .where("name", ">=", searchStr)
-        .where("name", "<=", searchStr + "\uf8ff")
-        .orderBy("name");
+        .where("searchName", ">=", search.toLowerCase())
+        .where("searchName", "<=", search.toLowerCase() + "\uf8ff")
+        .orderBy("searchName");
     } else {
       // Default view: Latest products
       query = query.orderBy("createdAt", "desc");
