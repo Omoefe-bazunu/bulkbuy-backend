@@ -9,6 +9,7 @@ exports.addProduct = async (req, res) => {
     const productData = {
       userId,
       name,
+      searchName: name.toLowerCase(),
       description,
       isPromo,
       images, // Array of Firebase Storage URLs
