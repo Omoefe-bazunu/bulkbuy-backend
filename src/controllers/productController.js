@@ -309,42 +309,48 @@ exports.getProductReviews = async (req, res) => {
 exports.addReview = async (req, res) => {
   try {
     const { productId, rating, comment } = req.body;
+    const userId = req.user.id;
+    const displayName = req.user?.fullName || "Anonymous User";
 
-    // 1. Basic Validation
-    if (!productId || rating === undefined || !comment) {
-      return res.status(400).json({ message: "Missing required fields" });
-    }
-
-    // 2. Extract identity from request (mapped from your DB structure)
-    // Fallback: Name -> Email -> Anonymous
-    const userId = req.user?.id;
-    const displayName =
-      req.user?.fullName ||
-      req.user?.name ||
-      req.user?.email?.split("@")[0] ||
-      "Anonymous User";
-
-    // 3. Construct clean data for Firestore
     const reviewData = {
-      productId: String(productId),
-      userId: String(userId),
-      fullName: String(displayName), // Updated to match your schema
+      productId,
+      userId,
+      fullName: displayName,
       rating: Number(rating),
-      comment: String(comment).trim(),
+      comment: comment.trim(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Use unique ID to prevent duplicate reviews by same user
     const reviewId = `${userId}_${productId}`;
 
+    // 1. Save the review
     await db
       .collection("reviews")
       .doc(reviewId)
       .set(reviewData, { merge: true });
 
-    res.status(200).json({ success: true, message: "Review saved" });
+    // 2. Fetch all reviews for this product to recalculate stats
+    const reviewsSnap = await db
+      .collection("reviews")
+      .where("productId", "==", productId)
+      .get();
+    const reviews = reviewsSnap.docs.map((d) => d.data());
+
+    const reviewCount = reviews.length;
+    const avgRating = (
+      reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviewCount
+    ).toFixed(1);
+
+    // 3. Update the Product document so the Marketplace can see it instantly
+    await db.collection("products").doc(productId).update({
+      avgRating,
+      reviewCount,
+    });
+
+    res
+      .status(200)
+      .json({ success: true, message: "Review saved and stats updated" });
   } catch (error) {
-    console.error("FIRESTORE_REVIEW_ERROR:", error);
     res
       .status(500)
       .json({ message: "Failed to save review", error: error.message });
@@ -358,23 +364,30 @@ exports.deleteReview = async (req, res) => {
     const userId = req.user.id;
     const reviewId = `${userId}_${productId}`;
 
-    const reviewRef = db.collection("reviews").doc(reviewId);
-    const doc = await reviewRef.get();
+    await db.collection("reviews").doc(reviewId).delete();
 
-    if (!doc.exists) {
-      return res.status(404).json({ message: "Review not found" });
-    }
+    // Recalculate and update product document
+    const reviewsSnap = await db
+      .collection("reviews")
+      .where("productId", "==", productId)
+      .get();
+    const reviews = reviewsSnap.docs.map((d) => d.data());
 
-    // Security: Only the owner can delete
-    if (doc.data().userId !== userId) {
-      return res
-        .status(403)
-        .json({ message: "Unauthorized to delete this review" });
-    }
+    const reviewCount = reviews.length;
+    const avgRating =
+      reviewCount > 0
+        ? (
+            reviews.reduce((acc, curr) => acc + curr.rating, 0) / reviewCount
+          ).toFixed(1)
+        : "0.0";
 
-    await reviewRef.delete();
-    res.status(200).json({ success: true, message: "Review deleted" });
+    await db.collection("products").doc(productId).update({
+      avgRating,
+      reviewCount,
+    });
+
+    res.status(200).json({ success: true });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete review" });
+    res.status(500).json({ message: "Error deleting review" });
   }
 };
