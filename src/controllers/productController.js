@@ -183,17 +183,32 @@ exports.completeOrder = async (req, res) => {
 // Get Marketplace Products (Paginated & Sorted)
 exports.getMarketplace = async (req, res) => {
   try {
-    const { lastVisible, limit = 10 } = req.query; // Pagination params
-    let query = db
-      .collection("products")
-      .where("status", "==", "active")
-      .orderBy("createdAt", "desc")
-      .limit(Number(limit));
+    const { lastVisible, limit = 10, search = "" } = req.query;
 
-    // If paginating, start after the last document from previous fetch
+    // Base Query: Only show active products
+    let query = db.collection("products").where("status", "==", "active");
+
+    if (search.trim()) {
+      const searchStr = search.toLowerCase();
+      // Prefix search: matches names starting with the search string
+      // Note: This requires a composite index (status, name, createdAt)
+      query = query
+        .where("name", ">=", searchStr)
+        .where("name", "<=", searchStr + "\uf8ff")
+        .orderBy("name");
+    } else {
+      // Default view: Latest products
+      query = query.orderBy("createdAt", "desc");
+    }
+
+    query = query.limit(Number(limit));
+
+    // Pagination logic
     if (lastVisible) {
       const lastDoc = await db.collection("products").doc(lastVisible).get();
-      if (lastDoc.exists) query = query.startAfter(lastDoc);
+      if (lastDoc.exists) {
+        query = query.startAfter(lastDoc);
+      }
     }
 
     const snapshot = await query.get();
@@ -201,8 +216,6 @@ exports.getMarketplace = async (req, res) => {
       id: doc.id,
       ...doc.data(),
     }));
-
-    // Identify the new last document for the next page request
     const lastId =
       snapshot.docs.length > 0
         ? snapshot.docs[snapshot.docs.length - 1].id
@@ -210,7 +223,8 @@ exports.getMarketplace = async (req, res) => {
 
     res.status(200).json({ products, lastId });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching marketplace" });
+    console.error("Marketplace Error:", error);
+    res.status(500).json({ message: error.message });
   }
 };
 
