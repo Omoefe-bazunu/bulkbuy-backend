@@ -9,7 +9,7 @@ exports.addProduct = async (req, res) => {
     const productData = {
       userId,
       name,
-      searchName: name.toLowerCase(),
+      searchName: name.toLowerCase(), // For case-insensitive search
       description,
       isPromo,
       images, // Array of Firebase Storage URLs
