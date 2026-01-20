@@ -6,39 +6,45 @@ exports.getMyChats = async (req, res) => {
   try {
     const userId = req.user.id;
 
-    // Fetch deals where user is the buyer
-    const buyerSnapshot = await db
-      .collection("orders")
-      .where("buyerId", "==", userId)
-      .get();
+    // Fetch orders where user is either buyer or seller
+    const [buyerSnapshot, sellerSnapshot] = await Promise.all([
+      db.collection("orders").where("buyerId", "==", userId).get(),
+      db.collection("orders").where("sellerId", "==", userId).get(),
+    ]);
 
-    // Fetch deals where user is the seller
-    const sellerSnapshot = await db
-      .collection("orders")
-      .where("sellerId", "==", userId)
-      .get();
+    const allOrderDocs = [...buyerSnapshot.docs, ...sellerSnapshot.docs];
 
-    const buyerChats = buyerSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
-    const sellerChats = sellerSnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    // Map through orders and fetch the other party's current fullName from Users collection
+    const chatsWithNames = await Promise.all(
+      allOrderDocs.map(async (doc) => {
+        const orderData = doc.data();
+        const otherPartyId =
+          userId === orderData.buyerId ? orderData.sellerId : orderData.buyerId;
 
-    // Combine and sort by last activity (descending)
-    const allChats = [...buyerChats, ...sellerChats].sort((a, b) => {
+        // Fetch the other user's current data
+        const userDoc = await db.collection("users").doc(otherPartyId).get();
+        const userData = userDoc.exists ? userDoc.data() : null;
+
+        return {
+          id: doc.id,
+          ...orderData,
+          // Override with the fresh name from the users collection
+          partnerFullName: userData ? userData.fullName : "BulkBuy User",
+        };
+      }),
+    );
+
+    // Sort by most recent activity
+    const sortedChats = chatsWithNames.sort((a, b) => {
       const timeA = a.updatedAt?._seconds || 0;
       const timeB = b.updatedAt?._seconds || 0;
       return timeB - timeA;
     });
 
-    res.status(200).json(allChats);
+    res.status(200).json(sortedChats);
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to load inbox", error: error.message });
+    console.error("GetMyChats Error:", error);
+    res.status(500).json({ message: "Failed to load chats" });
   }
 };
 
