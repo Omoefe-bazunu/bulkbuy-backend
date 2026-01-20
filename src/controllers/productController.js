@@ -309,6 +309,12 @@ exports.getProductReviews = async (req, res) => {
 exports.addReview = async (req, res) => {
   try {
     const { productId, rating, comment } = req.body;
+
+    // Safety check for required fields
+    if (!productId || !rating || !comment) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const userId = req.user.id;
     const userName = req.user.name;
 
@@ -317,20 +323,27 @@ exports.addReview = async (req, res) => {
       userId,
       userName,
       rating: Number(rating),
-      comment,
+      comment: comment.trim(),
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     };
 
-    // Use a unique ID to allow only one review per user per product (Update if exists)
+    // Use a unique ID: userId_productId
     const reviewId = `${userId}_${productId}`;
+
+    // Write to Firestore
     await db
       .collection("reviews")
       .doc(reviewId)
       .set(reviewData, { merge: true });
 
+    console.log(`Review saved successfully for product: ${productId}`);
     res.status(200).json({ success: true, message: "Review saved" });
   } catch (error) {
-    res.status(500).json({ message: "Failed to save review" });
+    // This will print the EXACT error in your server terminal/Render logs
+    console.error("FIRESTORE_REVIEW_ERROR:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to save review", error: error.message });
   }
 };
 
