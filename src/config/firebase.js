@@ -13,7 +13,7 @@ try {
   else {
     const serviceAccountPath = path.resolve(
       __dirname,
-      "../../serviceAccountKey.json"
+      "../../serviceAccountKey.json",
     );
     if (fs.existsSync(serviceAccountPath)) {
       serviceAccount = require(serviceAccountPath);
@@ -28,7 +28,7 @@ try {
     console.log("✅ Firebase Admin Initialized Successfully");
   } else {
     console.error(
-      "❌ Firebase Initialization Failed: No Service Account Found."
+      "❌ Firebase Initialization Failed: No Service Account Found.",
     );
   }
 } catch (err) {

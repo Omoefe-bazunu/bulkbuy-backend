@@ -4,25 +4,24 @@ const { db, admin } = require("../config/firebase");
 exports.submitKYC = async (req, res) => {
   try {
     const userId = req.user.id;
-    const { nin, bvn, passportUrl, cacUrl, statusReportUrl } = req.body;
+    const { nin, bvn, passportUrl } = req.body;
 
-    // 1. Validation
-    if (!nin || !bvn || !passportUrl || !cacUrl) {
+    // 1. Validation (CAC removed)
+    if (!nin || !bvn || !passportUrl) {
       return res
         .status(400)
-        .json({ message: "NIN, BVN, Passport, and CAC are required." });
+        .json({ message: "NIN, BVN, and Passport ID are required." });
     }
 
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
 
-    if (!userDoc.exists) {
-      return res.status(404).json({ message: "User account not found." });
-    }
+    if (!userDoc.exists)
+      return res.status(404).json({ message: "Account not found." });
 
     const userData = userDoc.data();
 
-    // 2. State Check
+    // 2. Status Guard
     if (userData.status === "pending") {
       return res
         .status(400)
@@ -32,15 +31,13 @@ exports.submitKYC = async (req, res) => {
       return res.status(400).json({ message: "Account is already verified." });
     }
 
-    // 3. Update User Document
+    // 3. Update User
     await userRef.update({
       status: "pending",
       kycData: {
         nin,
         bvn,
         passportUrl,
-        cacUrl,
-        statusReportUrl: statusReportUrl || null,
         submittedAt: admin.firestore.FieldValue.serverTimestamp(),
       },
       kycUpdateHistory: admin.firestore.FieldValue.arrayUnion({
@@ -51,11 +48,13 @@ exports.submitKYC = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "KYC documents submitted. Verification is now pending.",
+      message: "KYC documents submitted. Our team will review shortly.",
     });
   } catch (error) {
     console.error("KYC Submit Error:", error);
-    res.status(500).json({ message: "Server error during KYC submission." });
+    res
+      .status(500)
+      .json({ message: "Submission failed. Please try again later." });
   }
 };
 
